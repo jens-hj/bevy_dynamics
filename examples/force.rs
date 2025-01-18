@@ -2,7 +2,7 @@ use bevy::{
     pbr::{MeshMaterial3d, StandardMaterial},
     prelude::*,
 };
-use dynamics::{Acceleration, DynamicsPlugin, Mass, Velocity};
+use dynamics::{Damping, DynamicsPlugin, Mass, Velocity};
 #[cfg(feature = "debug")]
 use dynamics::{Debug, DebugColors, DebugScale};
 
@@ -115,6 +115,7 @@ fn setup_scene(
                 bevy_catppuccin::Flavor::MOCHA.blue,
             ))),
             Mass::new(1.0),
+            Damping::new(0.5),
             PickingBehavior::IGNORE,
         ))
         .id();

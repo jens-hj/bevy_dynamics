@@ -32,7 +32,7 @@ pub fn apply_dynamics(
 
         // Apply damping if component exists
         if let Some(damping) = damping {
-            velocity.apply_damping(damping);
+            velocity.apply_damping(damping, time.delta_secs());
         }
 
         // Apply velocity to transform

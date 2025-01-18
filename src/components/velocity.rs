@@ -47,8 +47,14 @@ impl Velocity {
     }
 
     /// Apply damping to the velocity to mimic friction.
-    pub fn apply_damping(&mut self, damping: &Damping) {
-        self.value *= 1.0 - damping.value;
+    pub fn apply_damping(&mut self, damping: &Damping, delta_time_secs: f32) {
+        self.value *= 1.0 - damping.value * delta_time_secs;
+
+        // like air resistance damping should be proportional to the square of
+        // the speed
+        // self.value *=
+        //     1.0 - damping.value * self.value.length_squared() *
+        // delta_time_secs;
     }
 
     /// Get the current speed.
