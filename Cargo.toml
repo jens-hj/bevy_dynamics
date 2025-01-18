@@ -11,7 +11,7 @@ default = ["debug"]
 debug = []
 
 [dependencies]
-bevy = { version = "0.15" }
+bevy = { version = "0.15", features = [ "wayland" ] }
 
 [dev-dependencies]
 bevy = { version = "0.15", default-features = true }

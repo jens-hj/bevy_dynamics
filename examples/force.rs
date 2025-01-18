@@ -64,7 +64,7 @@ fn main() {
     // Setup the visuals
     app.insert_resource(ClearColor(bevy_catppuccin::Flavor::MOCHA.base));
     app.insert_resource(AmbientLight {
-        brightness: 200.0,
+        brightness: 500.0,
         ..default()
     });
 
@@ -114,7 +114,32 @@ fn setup_scene(
             MeshMaterial3d(materials.add(StandardMaterial::from_color(
                 bevy_catppuccin::Flavor::MOCHA.blue,
             ))),
+            Transform::from_xyz(-1.0, 0.0, 0.0),
             Mass::new(1.0),
+            Damping::new(0.5),
+            PickingBehavior::IGNORE,
+        ))
+        .id();
+
+    #[cfg(feature = "debug")]
+    commands.entity(entity).insert((
+        Debug::default(),
+        DebugColors {
+            velocity: VELOCITY_COLOR,
+            acceleration: ACCELERATION_COLOR,
+        },
+        DebugScale { scale: SCALE },
+    ));
+
+    // Add moving entity with debug visualization
+    let entity = commands
+        .spawn((
+            Mesh3d(meshes.add(Sphere::new(0.1))),
+            MeshMaterial3d(materials.add(StandardMaterial::from_color(
+                bevy_catppuccin::Flavor::MOCHA.peach,
+            ))),
+            Transform::from_xyz(1.0, 0.0, 0.0),
+            Mass::new(2.0),
             Damping::new(0.5),
             PickingBehavior::IGNORE,
         ))
@@ -184,15 +209,13 @@ fn pointer_drag_end(
     mut force_arrow: ResMut<ForceArrow>,
     mut query: Query<(&Mass, &mut Velocity)>,
 ) {
-    let Ok((mass, mut velocity)) = query.get_single_mut() else {
-        return;
-    };
-
     let Some(vector) = force_arrow.vector() else {
         return;
     };
 
-    velocity.apply_impulse(vector * 50.0, &mass, 1.0 / TICK_RATE as f32);
+    for (mass, mut velocity) in query.iter_mut() {
+        velocity.apply_impulse(vector * 50.0, &mass, 1.0 / TICK_RATE as f32);
+    }
 
     force_arrow.reset();
 }

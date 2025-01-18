@@ -106,7 +106,7 @@ pub fn update_velocity_text(
 
     if let Ok(mut vector_text) = query_vector_text.get_single_mut() {
         vector_text.0 = format!(
-            "[{:.2}, {:.2}, {:.2}]",
+            "|[{:.2}, {:.2}, {:.2}]|",
             velocity.value.x, velocity.value.y, velocity.value.z
         );
     };
@@ -140,7 +140,7 @@ pub fn update_acceleration_text(
 
     if let Ok(mut vector_text) = query_vector_text.get_single_mut() {
         vector_text.0 = format!(
-            "[{:.2}, {:.2}, {:.2}]",
+            "|[{:.2}, {:.2}, {:.2}]|",
             acceleration.value.x, acceleration.value.y, acceleration.value.z
         );
     };
