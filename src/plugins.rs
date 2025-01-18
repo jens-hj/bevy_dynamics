@@ -1,24 +1,21 @@
+//! The `plugins` module contains the [`DynamicsPlugin`].
+
 use bevy::prelude::*;
 
-use crate::{apply_acceleration, apply_velocity};
-
+use crate::apply_dynamics;
 #[cfg(feature = "debug")]
-use crate::{debug_acceleration, debug_velocity};
+use crate::debug;
 
+/// The Bevy [`Plugin`] for the [`DynamicsPlugin`].
 pub struct DynamicsPlugin;
 
 impl Plugin for DynamicsPlugin {
     fn build(&self, app: &mut App) {
-        let systems = (apply_acceleration, apply_velocity);
-
         #[cfg(feature = "debug")]
         {
-            app.add_systems(Update, (systems, debug_acceleration, debug_velocity));
+            app.add_systems(Update, debug);
         }
 
-        #[cfg(not(feature = "debug"))]
-        {
-            app.add_systems(Update, systems);
-        }
+        app.add_systems(FixedUpdate, apply_dynamics);
     }
 }

@@ -1,56 +1,59 @@
 use bevy::{
     pbr::{MeshMaterial3d, StandardMaterial},
-    prelude::Sphere,
     prelude::*,
 };
-use dynamics::{Acceleration, DynamicsPlugin, Velocity};
+use dynamics::{Acceleration, Damping, DynamicsPlugin, Velocity};
 #[cfg(feature = "debug")]
 use dynamics::{Debug, DebugColors, DebugScale};
 
-#[derive(Component)]
-struct VelocityText;
-
-#[derive(Component)]
-struct AccelerationText;
+mod common;
+use common::*;
 
 fn main() {
     let mut app = App::new();
 
+    // Determine the fixed update rate
+    app.insert_resource(Time::<Fixed>::from_hz(100.0));
     app.add_plugins((DefaultPlugins, DynamicsPlugin));
 
+    // Setup the visuals
     app.insert_resource(ClearColor(bevy_catppuccin::Flavor::MOCHA.base));
+    app.insert_resource(AmbientLight {
+        brightness: 200.0,
+        ..default()
+    });
 
-    // Add a simple entity with velocity, acceleration, and debug
-    app.add_systems(Startup, setup);
+    // Setup the scene and text
+    app.add_systems(Startup, (setup_scene, setup_text));
 
     // Update the text when the velocity or acceleration changes
-    app.add_systems(
-        Update,
-        (
-            update_acceleration,
-            update_velocity_text,
-            update_acceleration_text,
-        ),
-    );
+    app.add_systems(Update, (update_velocity_text, update_acceleration_text));
+
+    // Update the acceleration with a sine wave in x and z over time
+    app.add_systems(FixedUpdate, update_acceleration);
 
     app.run();
 }
 
-fn setup(
+/// Bevy [`Startup`] system that sets up the scene with a camera and a dynamics
+/// entity with a mass of 1.0, an initial velocity of [0, 0, 0], an initial
+/// acceleration of [1, 0, 1], and a damping of 0.05.
+///
+/// Also sets up debugging if the `debug` feature is enabled.
+fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    const VELOCITY_COLOR: Color = bevy_catppuccin::Flavor::MOCHA.green;
-    const ACCELERATION_COLOR: Color = bevy_catppuccin::Flavor::MOCHA.red;
     #[cfg(feature = "debug")]
     const SCALE: f32 = 1.0;
 
-    // Add camera
+    // Add camera and light
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 5.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 5.0, 0.0).looking_at(Vec3::ZERO, Vec3::Z),
     ));
+    commands.spawn(DirectionalLight::default());
 
     // Add moving entity with debug visualization
     let entity = commands
@@ -62,6 +65,7 @@ fn setup(
             Transform::from_xyz(-0.5, 0.0, 0.0),
             Velocity::new(Vec3::new(0.0, 0.0, 0.0)),
             Acceleration::new(Vec3::new(1.0, 0.0, 1.0)),
+            Damping::new(0.05),
         ))
         .id();
 
@@ -74,60 +78,14 @@ fn setup(
         },
         DebugScale { scale: SCALE },
     ));
-
-    // simple light
-    commands.spawn(DirectionalLight::default());
-
-    // text in the top left corner
-    commands
-        .spawn(Node {
-            left: Val::Px(10.0),
-            top: Val::Px(10.0),
-            position_type: PositionType::Absolute,
-            display: Display::Flex,
-            flex_direction: FlexDirection::Column,
-            ..default()
-        })
-        .with_children(|parent| {
-            parent
-                .spawn(Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    ..default()
-                })
-                .with_children(|parent| {
-                    parent.spawn((Text::new("Velocity = "), TextColor(VELOCITY_COLOR.into())));
-
-                    parent.spawn((
-                        Text::new("[0, 0, 0]"),
-                        TextColor(VELOCITY_COLOR.into()),
-                        VelocityText,
-                    ));
-                });
-
-            parent
-                .spawn(Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    ..default()
-                })
-                .with_children(|parent| {
-                    parent.spawn((
-                        Text::new("Acceleration = "),
-                        TextColor(ACCELERATION_COLOR.into()),
-                    ));
-
-                    parent.spawn((
-                        Text::new("[0, 0, 0]"),
-                        TextColor(ACCELERATION_COLOR.into()),
-                        AccelerationText,
-                    ));
-                });
-        });
 }
 
-// make accerlation depend on time with a sine wave in x and z
-fn update_acceleration(mut query: Query<&mut Acceleration>, time: Res<Time>) {
+/// Bevy [`FixedUpdate`] system that updates the acceleration with a sine wave
+/// in x and z over time
+fn update_acceleration(
+    mut query: Query<&mut Acceleration>,
+    time: Res<Time<Fixed>>,
+) {
     const AMPLITUDE: f32 = 5.0;
 
     for mut acceleration in query.iter_mut() {
@@ -135,30 +93,4 @@ fn update_acceleration(mut query: Query<&mut Acceleration>, time: Res<Time>) {
         let z = AMPLITUDE * time.elapsed_secs().cos();
         acceleration.value = Vec3::new(x, 0.0, z);
     }
-}
-
-fn update_velocity_text(
-    query: Query<&Velocity, Changed<Velocity>>,
-    mut query_text: Query<&mut Text, With<VelocityText>>,
-) {
-    let velocity = query.get_single().unwrap();
-    let mut text = query_text.get_single_mut().unwrap();
-
-    text.0 = format!(
-        "[{:.2}, {:.2}, {:.2}]",
-        velocity.value.x, velocity.value.y, velocity.value.z
-    );
-}
-
-fn update_acceleration_text(
-    query: Query<&Acceleration, Changed<Acceleration>>,
-    mut query_text: Query<&mut Text, With<AccelerationText>>,
-) {
-    let acceleration = query.get_single().unwrap();
-    let mut text = query_text.get_single_mut().unwrap();
-
-    text.0 = format!(
-        "[{:.2}, {:.2}, {:.2}]",
-        acceleration.value.x, acceleration.value.y, acceleration.value.z
-    );
 }

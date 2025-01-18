@@ -1,53 +1,76 @@
+//! The `systems` module contains the [`apply_acceleration`] and
+//! [`apply_velocity`] systems.
+//!
+//! Along with the [`debug_acceleration`] and [`debug_velocity`] systems, which
+//! are only available when the `debug` feature is enabled.
+
 use bevy::prelude::*;
 
-use crate::{Acceleration, Velocity};
+use crate::{Acceleration, Damping, Velocity};
 #[cfg(feature = "debug")]
 use crate::{Debug, DebugColors, DebugScale};
 
-pub fn apply_acceleration(mut query: Query<(&mut Velocity, &Acceleration)>, time: Res<Time>) {
-    for (mut velocity, acceleration) in query.iter_mut() {
-        velocity.apply_acceleration(acceleration, time.delta_secs());
-    }
-}
+/// Applies [`Acceleration`], [`Damping`], and [`Velocity`] changes in a single
+/// pass.
+///
+/// This system is run on the [`FixedUpdate`] schedule.
+pub fn apply_dynamics(
+    mut query: Query<(
+        &mut Transform,
+        &mut Velocity,
+        Option<&Acceleration>,
+        Option<&Damping>,
+    )>,
+    time: Res<Time<Fixed>>,
+) {
+    for (mut transform, mut velocity, acceleration, damping) in query.iter_mut()
+    {
+        // Apply acceleration if component exists
+        if let Some(acceleration) = acceleration {
+            velocity.apply_acceleration(&acceleration, time.delta_secs());
+        }
 
-pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
-    for (mut transform, velocity) in query.iter_mut() {
+        // Apply damping if component exists
+        if let Some(damping) = damping {
+            velocity.apply_damping(damping);
+        }
+
+        // Apply velocity to transform
         transform.translation += velocity.value * time.delta_secs();
     }
 }
 
+/// Debugs the [`Acceleration`] and [`Velocity`] components by drawing arrows
+/// in the scene with the Bevy [`Gizmos`].
 #[cfg(feature = "debug")]
-pub fn debug_acceleration(
+pub fn debug(
     mut gizmos: Gizmos,
-    query: Query<(&Transform, &Acceleration, &Debug, &DebugColors, &DebugScale)>,
+    query: Query<(
+        &Transform,
+        &Velocity,
+        &Acceleration,
+        &Debug,
+        &DebugColors,
+        &DebugScale,
+    )>,
 ) {
-    for (transform, acceleration, debug, colors, scale) in query.iter() {
-        if !debug.enabled {
-            continue;
+    for (transform, velocity, acceleration, debug, colors, scale) in
+        query.iter()
+    {
+        if debug.velocity {
+            gizmos.arrow(
+                transform.translation,
+                transform.translation + velocity.value * scale.scale,
+                colors.velocity,
+            );
         }
 
-        gizmos.line(
-            transform.translation,
-            transform.translation + acceleration.value * scale.scale,
-            colors.acceleration,
-        );
-    }
-}
-
-#[cfg(feature = "debug")]
-pub fn debug_velocity(
-    mut gizmos: Gizmos,
-    query: Query<(&Transform, &Velocity, &Debug, &DebugColors, &DebugScale)>,
-) {
-    for (transform, velocity, debug, colors, scale) in query.iter() {
-        if !debug.enabled {
-            continue;
+        if debug.acceleration {
+            gizmos.arrow(
+                transform.translation,
+                transform.translation + acceleration.value * scale.scale,
+                colors.acceleration,
+            );
         }
-
-        gizmos.line(
-            transform.translation,
-            transform.translation + velocity.value * scale.scale,
-            colors.velocity,
-        );
     }
 }

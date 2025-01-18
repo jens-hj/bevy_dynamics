@@ -1,17 +1,17 @@
 [package]
 name = "dynamics"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/jens-hj/bevy_dynamics"
 authors = ["Avianastra <avianastra@gmail.com>"]
 rust-version = "1.84"
 
 [features]
-default = []
-debug = ["bevy/bevy_gizmos"]
+default = ["debug"]
+debug = []
 
 [dependencies]
-bevy = { version = "0.15", default-features = false }
+bevy = { version = "0.15" }
 
 [dev-dependencies]
 bevy = { version = "0.15", default-features = true }
