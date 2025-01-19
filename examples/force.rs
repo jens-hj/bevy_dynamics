@@ -2,9 +2,7 @@ use bevy::{
     pbr::{MeshMaterial3d, StandardMaterial},
     prelude::*,
 };
-use dynamics::{Damping, DynamicsPlugin, Mass, Velocity};
-#[cfg(feature = "debug")]
-use dynamics::{Debug, DebugColors, DebugScale};
+use dynamics::{DynamicsPlugin, Mass, Velocity};
 
 mod common;
 use common::*;
@@ -29,7 +27,7 @@ impl Default for ForceArrow {
         Self {
             start: None,
             end: None,
-            color: bevy_catppuccin::Flavor::MOCHA.mauve,
+            color: bevy_catppuccin::Flavor::MOCHA.surface1,
         }
     }
 }
@@ -71,8 +69,41 @@ fn main() {
     // Setup the force arrow that shows up when dragging
     app.init_resource::<ForceArrow>();
 
+    // Setup the particles
+    let particles = vec![
+        ParticleConfiguration {
+            name: "Light".into(),
+            mass: 1.0,
+            radius: 0.1,
+            color: bevy_catppuccin::Flavor::MOCHA.blue,
+            position: Vec3::new(1.0, 0.0, 0.0),
+            velocity: Vec3::ZERO,
+            acceleration: Vec3::ZERO,
+            damping: 0.5,
+        },
+        ParticleConfiguration {
+            name: "Heavy".into(),
+            mass: 3.0,
+            radius: 0.3,
+            color: bevy_catppuccin::Flavor::MOCHA.mauve,
+            position: Vec3::new(-1.0, 0.0, 0.0),
+            velocity: Vec3::ZERO,
+            acceleration: Vec3::ZERO,
+            damping: 0.5,
+        },
+    ];
+    app.insert_resource(SpawnConfiguration::new(particles));
+
     // Add a simple entity with velocity, acceleration, and debug
-    app.add_systems(Startup, (setup_scene, setup_text, setup_dragging_plane));
+    app.add_systems(
+        Startup,
+        (
+            setup_scene,
+            setup_text,
+            setup_instructions,
+            setup_dragging_plane,
+        ),
+    );
 
     // Update the text when the velocity or acceleration changes
     app.add_systems(
@@ -80,80 +111,26 @@ fn main() {
         (
             update_velocity_text,
             update_acceleration_text,
-            draw_force_arrow,
+            draw_force_arrows,
         ),
     );
 
     app.run();
 }
 
-/// Bevy [`Startup`] system that sets up the scene with a camera and a dynamics
-/// entity with a mass of 1.0, an initial velocity of [0, 0, 0], an initial
-/// acceleration of [0, 0, 0], and a damping of 0.05.
-///
-/// Also sets up debugging if the `debug` feature is enabled.
-fn setup_scene(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    #[cfg(feature = "debug")]
-    const SCALE: f32 = 1.0;
-
-    // Add camera and light
-    commands.spawn((
-        Camera3d::default(),
-        Transform::from_xyz(0.0, 5.0, 0.0).looking_at(Vec3::ZERO, Vec3::Z),
-    ));
-    commands.spawn(DirectionalLight::default());
-
-    // Add moving entity with debug visualization
-    let entity = commands
-        .spawn((
-            Mesh3d(meshes.add(Sphere::new(0.1))),
-            MeshMaterial3d(materials.add(StandardMaterial::from_color(
-                bevy_catppuccin::Flavor::MOCHA.blue,
-            ))),
-            Transform::from_xyz(-1.0, 0.0, 0.0),
-            Mass::new(1.0),
-            Damping::new(0.5),
-            PickingBehavior::IGNORE,
-        ))
-        .id();
-
-    #[cfg(feature = "debug")]
-    commands.entity(entity).insert((
-        Debug::default(),
-        DebugColors {
-            velocity: VELOCITY_COLOR,
-            acceleration: ACCELERATION_COLOR,
-        },
-        DebugScale { scale: SCALE },
-    ));
-
-    // Add moving entity with debug visualization
-    let entity = commands
-        .spawn((
-            Mesh3d(meshes.add(Sphere::new(0.1))),
-            MeshMaterial3d(materials.add(StandardMaterial::from_color(
-                bevy_catppuccin::Flavor::MOCHA.peach,
-            ))),
-            Transform::from_xyz(1.0, 0.0, 0.0),
-            Mass::new(2.0),
-            Damping::new(0.5),
-            PickingBehavior::IGNORE,
-        ))
-        .id();
-
-    #[cfg(feature = "debug")]
-    commands.entity(entity).insert((
-        Debug::default(),
-        DebugColors {
-            velocity: VELOCITY_COLOR,
-            acceleration: ACCELERATION_COLOR,
-        },
-        DebugScale { scale: SCALE },
-    ));
+/// Bevy [`Startup`] system that sets up the instructions text.
+fn setup_instructions(mut commands: Commands) {
+    commands
+        .spawn(Node {
+            left: Val::Px(10.0),
+            bottom: Val::Px(10.0),
+            position_type: PositionType::Absolute,
+            ..default()
+        })
+        .with_child((
+            Text::new("Drag to apply force to the particles"),
+            TextColor(bevy_catppuccin::Flavor::MOCHA.text),
+        ));
 }
 
 /// Bevy [`Startup`] system that sets up a plane that can observe pointer
@@ -196,7 +173,7 @@ fn pointer_drag(
 ) {
     force_arrow.start = Some(
         force_arrow.start.unwrap()
-            - trigger.event.delta.extend(0.0).xzy() / 200.0,
+            - trigger.event.delta.extend(0.0).xzy() / 175.0,
     );
 }
 
@@ -222,7 +199,11 @@ fn pointer_drag_end(
 
 /// Bevy [`System`] that draws the force arrow in the scene with the Bevy
 /// [`Gizmos`].
-fn draw_force_arrow(mut gizmos: Gizmos, force_arrow: Res<ForceArrow>) {
+fn draw_force_arrows(
+    mut gizmos: Gizmos,
+    force_arrow: Res<ForceArrow>,
+    query: Query<(&Transform, &ParticleConfiguration), With<Mass>>,
+) {
     let Some(start) = force_arrow.start else {
         return;
     };
@@ -231,5 +212,15 @@ fn draw_force_arrow(mut gizmos: Gizmos, force_arrow: Res<ForceArrow>) {
         return;
     };
 
+    for (transform, config) in query.iter() {
+        let dir = (end - start).normalize();
+
+        let start = transform.translation + start - end - dir * config.radius;
+        let end = transform.translation - dir * config.radius;
+
+        gizmos.arrow(start, end, config.color.with_alpha(0.5));
+    }
+
+    // Also draw the force where it is being dragged
     gizmos.arrow(start, end, force_arrow.color);
 }

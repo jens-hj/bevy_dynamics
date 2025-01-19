@@ -7,7 +7,7 @@ authors = ["Avianastra <avianastra@gmail.com>"]
 rust-version = "1.84"
 
 [features]
-default = ["debug"]
+default = []
 debug = []
 
 [dependencies]
