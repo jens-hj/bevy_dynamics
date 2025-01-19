@@ -2,7 +2,7 @@ use bevy::{
     pbr::{MeshMaterial3d, StandardMaterial},
     prelude::*,
 };
-use dynamics::{DynamicsPlugin, Mass, Velocity};
+use bevy_dynamics::{DynamicsPlugin, Mass, Velocity};
 
 mod common;
 use common::*;

@@ -549,6 +549,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_dynamics"
+version = "0.4.1"
+dependencies = [
+ "bevy",
+ "bevy_catppuccin",
+]
+
+[[package]]
 name = "bevy_ecs"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1835,14 +1843,6 @@ name = "dpi"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f25c0e292a7ca6d6498557ff1df68f32c99850012b6ea401cf8daf771f22ff53"
-
-[[package]]
-name = "dynamics"
-version = "0.4.0"
-dependencies = [
- "bevy",
- "bevy_catppuccin",
-]
 
 [[package]]
 name = "either"

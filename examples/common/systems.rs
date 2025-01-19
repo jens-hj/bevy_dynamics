@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use dynamics::{Acceleration, Damping, Mass, Velocity};
+use bevy_dynamics::{Acceleration, Damping, Mass, Velocity};
 #[cfg(feature = "debug")]
-use dynamics::{Debug, DebugColors, DebugScale};
+use bevy_dynamics::{Debug, DebugColors, DebugScale};
 
 use super::{
     components::{

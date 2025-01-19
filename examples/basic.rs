@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use dynamics::{Acceleration, DynamicsPlugin};
+use bevy_dynamics::{Acceleration, DynamicsPlugin};
 
 mod common;
 use common::*;
